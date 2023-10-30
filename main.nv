@@ -1,0 +1,85 @@
+use std.net.http;
+use std.io;
+use std.value;
+use std.json;
+use std.env;
+use std.time;
+use std.process;
+
+let OPENID = env.get("BOOK_OPENID");
+let TEL = env.get("BOOK_TEL");
+let ENDPOINT = env.get("BOOK_ENDPOINT");
+
+if (OPENID == nil) {
+    io.println("请设置环境变量 BOOK_OPENID");
+    process.exit(1);
+}
+if (TEL == nil) {
+    io.println("请设置环境变量 BOOK_TEL");
+    process.exit(1);
+}
+if (ENDPOINT == nil) {
+    io.println("请设置环境变量 BOOK_ENDPOINT");
+    process.exit(1);
+}
+
+fn querystring(obj: value.Value): string {
+    let queries = [string] {};
+    let items = obj.object()!;
+    for (let k, v in items) {
+        queries.push(`${k}=${v}`);
+    }
+    return queries.join("&");
+}
+
+fn send_request(payload: value.Value) {
+    let headers = http.new_headers();
+    headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+
+    let req = http.new_request(
+        method: "POST",
+        url: ENDPOINT,
+        headers: headers,
+        body: querystring(payload).bytes()
+    );
+
+    let res = req.send();
+    let status = res.status();
+    if (status != 200) {
+        io.println(`请求失败，状态码：${res.status()}, text: ${res.text()}`);
+        return;
+    }
+
+    io.println("请求成功");
+    let data = res.json();
+    io.println(data.to_json(pretty: true));
+}
+
+fn get_list() {
+    send_request(json.parse(`{
+        "optype": 0,
+        "openid": "${OPENID}"
+    }`));
+}
+
+fn submit_book() {
+    let day = time.now().format("%Y-%m-%d");
+    send_request(json.parse(`{
+        "optype": 2,
+        "openid": "${OPENID}",
+        "tel": "${TEL}",
+        "day": "${day}",
+        "comId": 21
+    }`));
+}
+
+get_list();
+submit_book();
+
+// test "test querystring" {
+//     let obj = json.parse(`{
+//         "optype": 0,
+//         "openid": "12345"
+//     }`);
+//     assert querystring(obj) == "optype=0&openid=12345";
+// }
