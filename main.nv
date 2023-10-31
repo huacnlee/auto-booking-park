@@ -8,23 +8,11 @@ use std.process;
 
 let OPTYPE_LIST_ORDERS = 0;
 let OPTYPE_CHECK_AVAILABLE = 2;
+let OPTYPE_BOOK = 3;
+let OPTYPE_DELETE_ORDER = 5;
 
 let OPENID = env.get("BOOK_OPENID");
-let TEL = env.get("BOOK_TEL");
 let ENDPOINT = env.get("BOOK_ENDPOINT");
-
-if (OPENID == nil) {
-    io.println("请设置环境变量 BOOK_OPENID");
-    process.exit(1);
-}
-if (TEL == nil) {
-    io.println("请设置环境变量 BOOK_TEL");
-    process.exit(1);
-}
-if (ENDPOINT == nil) {
-    io.println("请设置环境变量 BOOK_ENDPOINT");
-    process.exit(1);
-}
 
 fn querystring(obj: value.Value): string {
     let queries = [string] {};
@@ -35,13 +23,13 @@ fn querystring(obj: value.Value): string {
     return queries.join("&");
 }
 
-fn send_request(payload: value.Value): value.Value? {
+fn send_request(path: string, payload: value.Value): value.Value? {
     let headers = http.new_headers();
     headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
 
     let req = http.new_request(
         method: "POST",
-        url: ENDPOINT,
+        url: `${ENDPOINT}${path}`,
         headers: headers,
         body: querystring(payload).bytes()
     );
@@ -51,41 +39,100 @@ fn send_request(payload: value.Value): value.Value? {
     if (res.status() != 200) {
         io.println(`请求失败，状态码：${res.status()}, text: ${res.text()}`);
         return nil;
+    } else {
+        return res.json();
     }
-    
-    return res.json();
 }
 
 fn get_list() {
-    send_request(json.parse(`{
+    send_request("/fanMuUser/getBingdPhone", json.parse(`{
         "optype": ${OPTYPE_LIST_ORDERS},
         "openid": "${OPENID}"
     }`));
 }
 
-fn check_available() {
+fn check_available(tel: string) {
     let day = time.now().format("%Y-%m-%d");
-    let res = send_request(json.parse(`{
+    let data = send_request("/fanMuUser/getBingdPhone", json.parse(`{
         "optype": ${OPTYPE_CHECK_AVAILABLE},
         "openid": "${OPENID}",
-        "tel": "${TEL}",
+        "tel": "${tel}",
         "day": "${day}",
         "comId": 21
     }`));
 
-    if (res == nil) {
+    if (data == nil) {
         return;
     }
 
-    let can_count = res?.get("canCarNum")?.int()!;
+    let can_count = data?.get("canCarNum")?.int()!;
     io.println(`Today available: ${can_count}`);
 }
 
-fn main() {
-    check_available();
+fn submit_book(day: string, card_code: string, tel: string) {
+    io.println(`Submiting book for car: ${card_code} day: ${day}`);
+
+    let data = send_request("/fanMuUser/getBingdPhone", json.parse(`{
+        "optype": 3,
+        "day": "${day}",
+        "openid": "${OPENID}",
+        "tel": "${tel}",
+        "comId": 21,
+        "carCodeAll": "${card_code}"
+    }`));
+
+    io.println(`submit_book res: ${data}`);
+    if (data?.get("opStatus")?.int() == 1) {
+        io.println("预约成功");
+        return;
+    } else {
+
+        if (let is_loged = data?.get("isLoged")?.bool()) {
+            if (is_loged == true) {
+                io.println(`车牌已经有预约了 ${day}`);
+                return;
+            }
+        }
+
+        io.println(`预约失败, ${data}`);
+        process.abort();
+    }
 }
 
-main();
+fn main() {
+    if (OPENID == nil) {
+        io.println("请设置环境变量 BOOK_OPENID");
+        process.exit(1);
+    }
+    if (ENDPOINT == nil) {
+        io.println("请设置环境变量 BOOK_ENDPOINT");
+        process.exit(1);
+    }
+
+    let tel = env.get("BOOK_TEL")!;
+    let tel_b = env.get("BOOK_TEL_B")!;
+
+    check_available(tel);
+
+    let date = time.now() + 1.days();
+    let day = date.format("%Y-%m-%d");
+
+    let car_code = env.get("BOOK_CARCODE")!;
+    if (date.weekday() == 3) {
+        car_code = env.get("BOOK_CARCODE1")!;
+    }
+    submit_book(day, car_code, tel);
+
+    let car_code_b = env.get("BOOK_CARCODE_B")!;
+    if (date.weekday() == 4) {
+        car_code_b = env.get("BOOK_CARCODE_B1")!;
+    }
+    submit_book(day, car_code_b, tel_b);
+}
+
+if (env.get("CI") != nil) {
+    main();
+}
 
 test "test querystring" {
     let obj = json.parse(`{
@@ -93,5 +140,5 @@ test "test querystring" {
         "openid": "12345"
     }`);
     let qs = querystring(obj);
-    assert qs == "optype=0&openid=12345";
+    assert_eq qs, "openid=12345&optype=0";
 }
