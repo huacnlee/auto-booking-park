@@ -6,6 +6,9 @@ use std.env;
 use std.time;
 use std.process;
 
+let OPTYPE_LIST_ORDERS = 0;
+let OPTYPE_CHECK_AVAILABLE = 2;
+
 let OPENID = env.get("BOOK_OPENID");
 let TEL = env.get("BOOK_TEL");
 let ENDPOINT = env.get("BOOK_ENDPOINT");
@@ -32,7 +35,7 @@ fn querystring(obj: value.Value): string {
     return queries.join("&");
 }
 
-fn send_request(payload: value.Value) {
+fn send_request(payload: value.Value): value.Value? {
     let headers = http.new_headers();
     headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
 
@@ -44,42 +47,51 @@ fn send_request(payload: value.Value) {
     );
 
     let res = req.send();
-    let status = res.status();
-    if (status != 200) {
-        io.println(`请求失败，状态码：${res.status()}, text: ${res.text()}`);
-        return;
-    }
 
-    io.println("请求成功");
-    let data = res.json();
-    io.println(data.to_json(pretty: true));
+    if (res.status() != 200) {
+        io.println(`请求失败，状态码：${res.status()}, text: ${res.text()}`);
+        return nil;
+    }
+    
+    return res.json();
 }
 
 fn get_list() {
     send_request(json.parse(`{
-        "optype": 0,
+        "optype": ${OPTYPE_LIST_ORDERS},
         "openid": "${OPENID}"
     }`));
 }
 
-fn submit_book() {
+fn check_available() {
     let day = time.now().format("%Y-%m-%d");
-    send_request(json.parse(`{
-        "optype": 2,
+    let res = send_request(json.parse(`{
+        "optype": ${OPTYPE_CHECK_AVAILABLE},
         "openid": "${OPENID}",
         "tel": "${TEL}",
         "day": "${day}",
         "comId": 21
     }`));
+
+    if (res == nil) {
+        return;
+    }
+
+    let can_count = res?.get("canCarNum")?.int()!;
+    io.println(`Today available: ${can_count}`);
 }
 
-get_list();
-submit_book();
+fn main() {
+    check_available();
+}
 
-// test "test querystring" {
-//     let obj = json.parse(`{
-//         "optype": 0,
-//         "openid": "12345"
-//     }`);
-//     assert querystring(obj) == "optype=0&openid=12345";
-// }
+main();
+
+test "test querystring" {
+    let obj = json.parse(`{
+        "optype": 0,
+        "openid": "12345"
+    }`);
+    let qs = querystring(obj);
+    assert qs == "optype=0&openid=12345";
+}
