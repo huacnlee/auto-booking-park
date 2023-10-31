@@ -1,0 +1,18 @@
+on:
+  schedule:
+    # every day at 10:00 am
+    - cron: '0 10 * * *'
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Navi
+        run: |
+          curl -sSL https://navi-lang.org/install | sh
+      - name: Run App
+        env:
+          CI: 1
+        run: |
+          navi run main.nv
