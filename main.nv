@@ -69,7 +69,7 @@ fn check_available(tel: string) {
     io.println(`Today available: ${can_count}`);
 }
 
-fn submit_book(day: string, card_code: string, tel: string) {
+fn submit_book(day: string, card_code: string, tel: string): string {
     io.println(`Submiting book for car: ${card_code} day: ${day}`);
 
     let data = send_request("/fanMuUser/getBingdPhone", json.parse(`{
@@ -81,21 +81,47 @@ fn submit_book(day: string, card_code: string, tel: string) {
         "carCodeAll": "${card_code}"
     }`));
 
+    let msg = "";
+
     io.println(`submit_book res: ${data}`);
-    if (data?.get("opStatus")?.int() == 1) {
-        io.println("预约成功");
-        return;
+    let op_status = data?.get("opStatus")?.int();
+    let is_loged = data?.get("isLoged")?.bool();
+
+    if (op_status == 1) {
+        msg = `预约成功, 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
     } else {
-
-        if (let is_loged = data?.get("isLoged")?.bool()) {
-            if (is_loged == true) {
-                io.println(`车牌已经有预约了 ${day}`);
-                return;
-            }
+        if (is_loged == true) {
+            msg = `车牌已经有预约了: ${card_code}, 日期: ${day}\n\n${data}`;
+        } else {
+            msg = `预约失败, ${card_code}, 日期: ${day}\n\n${data}`;
         }
+    }
 
-        io.println(`预约失败, ${data}`);
-        process.abort();
+    return msg;
+}
+
+fn notify_feishu(msg: string) {
+    let headers = http.new_headers();
+    headers.set("Content-Type", "application/json");
+
+    let msg = msg.replace("\n", "\\n");
+
+    let payload = json.parse(`{
+        "msg_type": "text",
+        "content": {
+            "text": "${msg}"
+        }
+    }`);
+    
+    let res = http.post(
+        url: env.get("FEISHU_WEBHOOK_URL")!,
+        headers: headers,
+        body: payload.to_json().bytes()
+    );
+
+    if (res.status() != 200) {
+        let data = res.json();
+        io.println(`\nFeishu Notify failed, body:\n${data}`);
     }
 }
 
@@ -121,17 +147,17 @@ fn main() {
     if (date.weekday() == 3) {
         car_code = env.get("BOOK_CARCODE1")!;
     }
-    submit_book(day, car_code, tel);
+    let msg = submit_book(day, car_code, tel);
+    io.println(msg);
+    notify_feishu(msg);
 
     let car_code_b = env.get("BOOK_CARCODE_B")!;
     if (date.weekday() == 4) {
         car_code_b = env.get("BOOK_CARCODE_B1")!;
     }
-    submit_book(day, car_code_b, tel_b);
-}
-
-if (env.get("CI") != nil) {
-    main();
+    let msg = submit_book(day, car_code_b, tel_b);
+    io.println(msg);
+    notify_feishu(msg);
 }
 
 test "test querystring" {
