@@ -189,5 +189,5 @@ test "test querystring" {
         "openid": "12345"
     }`);
     let qs = querystring(obj);
-    assert_eq qs, "openid=12345&optype=01";
+    assert_eq qs, "openid=12345&optype=0";
 }
