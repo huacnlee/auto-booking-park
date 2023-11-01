@@ -52,12 +52,11 @@ fn get_orders(): string {
 
     let msgs = [string] {};
 
-    // let msg = check_available(tel);
-    // msgs.push(msg);
+    let msg = check_available(tel);
+    msgs.push(msg);
 
     // TODO: Flatten optional
-    io.println(`${data}`);
-    let logs = data?.get("carLogs")?.array()!!;
+    let logs = data?.get("carLogs")?.array()!;
     io.println(`${logs}`);
     for (let log in logs) {
         let car_code = log.get("car")?.string();
