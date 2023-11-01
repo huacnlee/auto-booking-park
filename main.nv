@@ -57,7 +57,6 @@ fn get_orders(): string {
 
     // TODO: Flatten optional
     let logs = data?.get("carLogs")?.array()!;
-    io.println(`${logs}`);
     for (let log in logs) {
         let car_code = log.get("car")?.string();
         let day = log.get("day")?.string();
@@ -67,7 +66,6 @@ fn get_orders(): string {
             break;
         }
     }
-    io.println(`${tel}`);
 
     return msgs.join("\n");
 }

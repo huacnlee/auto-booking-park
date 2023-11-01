@@ -15,6 +15,15 @@ jobs:
       - name: Run App
         env:
           CI: 1
+          BOOK_OPENID: ${{ secrets.BOOK_OPENID }}
+          BOOK_ENDPOINT: ${{ secrets.BOOK_ENDPOINT }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          BOOK_TEL: ${{ secrets.BOOK_TEL }}
+          BOOK_CARCODE: ${{ secrets.BOOK_CARCODE }}
+          BOOK_CARCODE1: ${{ secrets.BOOK_CARCODE1 }}
+          BOOK_TEL_B: ${{ secrets.BOOK_TEL_B }}
+          BOOK_CARCODE_B: ${{ secrets.BOOK_CARCODE_B }}
+          BOOK_CARCODE_B1: ${{ secrets.BOOK_CARCODE_B1 }}
         run: |
           navi run main.nv
   test:
