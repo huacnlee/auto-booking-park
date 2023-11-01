@@ -16,3 +16,15 @@ jobs:
           CI: 1
         run: |
           navi run main.nv
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Navi
+        run: |
+          curl -sSL https://navi-lang.org/install | sh
+      - name: Run Tests
+        env:
+          CI: 1
+        run: |
+          navi test

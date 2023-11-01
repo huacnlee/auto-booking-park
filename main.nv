@@ -6,10 +6,7 @@ use std.env;
 use std.time;
 use std.process;
 
-let OPTYPE_LIST_ORDERS = 0;
-let OPTYPE_CHECK_AVAILABLE = 2;
-let OPTYPE_BOOK = 3;
-let OPTYPE_DELETE_ORDER = 5;
+/// optype: [2- check status, 3 - submit booking, 4 - list, 5 - delete]
 
 let OPENID = env.get("BOOK_OPENID");
 let ENDPOINT = env.get("BOOK_ENDPOINT");
@@ -44,17 +41,42 @@ fn send_request(path: string, payload: value.Value): value.Value? {
     }
 }
 
-fn get_list() {
-    send_request("/fanMuUser/getBingdPhone", json.parse(`{
-        "optype": ${OPTYPE_LIST_ORDERS},
-        "openid": "${OPENID}"
-    }`));
+fn get_orders(): string {
+    let tel = env.get("BOOK_TEL")!;
+    let payload = json.parse(`{
+        "optype": 4,
+        "openid": "${OPENID}",
+        "tel": "${tel}"
+    }`);
+    let data = send_request("/fanMuUser/getBingdPhone", payload);
+
+    let msgs = [string] {};
+
+    // let msg = check_available(tel);
+    // msgs.push(msg);
+
+    // TODO: Flatten optional
+    io.println(`${data}`);
+    let logs = data?.get("carLogs")?.array()!!;
+    io.println(`${logs}`);
+    for (let log in logs) {
+        let car_code = log.get("car")?.string();
+        let day = log.get("day")?.string();
+        let status = log.get("status")?.string();
+        msgs.push(`车牌: ${car_code}, 日期: ${day}`);
+        if (msgs.len() > 5) {
+            break;
+        }
+    }
+    io.println(`${tel}`);
+
+    return msgs.join("\n");
 }
 
-fn check_available(tel: string) {
+fn check_available(tel: string): string {
     let day = time.now().format("%Y-%m-%d");
     let data = send_request("/fanMuUser/getBingdPhone", json.parse(`{
-        "optype": ${OPTYPE_CHECK_AVAILABLE},
+        "optype": 2,
         "openid": "${OPENID}",
         "tel": "${tel}",
         "day": "${day}",
@@ -62,11 +84,11 @@ fn check_available(tel: string) {
     }`));
 
     if (data == nil) {
-        return;
+        return "";
     }
 
     let can_count = data?.get("canCarNum")?.int()!;
-    io.println(`Today available: ${can_count}`);
+    return `Today available: ${can_count}`;
 }
 
 fn submit_book(day: string, card_code: string, tel: string): string {
@@ -156,6 +178,10 @@ fn main() {
         car_code_b = env.get("BOOK_CARCODE_B1")!;
     }
     let msg = submit_book(day, car_code_b, tel_b);
+    io.println(msg);
+    notify_feishu(msg);
+
+    let msg = get_orders();
     io.println(msg);
     notify_feishu(msg);
 }
