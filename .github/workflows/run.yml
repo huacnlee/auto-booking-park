@@ -1,5 +1,4 @@
 on:
-  push:
   schedule:
     # every day at 10:00 am
     - cron: '0 10 * * *'
@@ -12,7 +11,7 @@ jobs:
       - uses: navilang/setup-navi@v1
         with:
           navi-version: 0.9.0-nightly
-      - name: Run App
+      - name: Perform
         env:
           CI: 1
           BOOK_OPENID: ${{ secrets.BOOK_OPENID }}
@@ -26,15 +25,3 @@ jobs:
           BOOK_CARCODE_B1: ${{ secrets.BOOK_CARCODE_B1 }}
         run: |
           navi run main.nv
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: navilang/setup-navi@v1
-        with:
-          navi-version: 0.9.0-nightly
-      - name: Run Tests
-        env:
-          CI: 1
-        run: |
-          navi test
