@@ -1,7 +1,7 @@
 on:
   schedule:
     # every day at 10:00 am (Beijing time)
-    - cron: '0 18 * * *'
+    - cron: '0 2 * * *'
 
 jobs:
   run:
