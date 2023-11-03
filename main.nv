@@ -22,7 +22,10 @@ fn querystring(obj: value.Value): string {
 
 fn send_request(path: string, payload: value.Value): value.Value? {
     let headers = http.new_headers();
-    headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+    headers.set(
+        "Content-Type",
+        "application/x-www-form-urlencoded;charset=UTF-8"
+    );
 
     let req = http.new_request(
         method: "POST",
@@ -72,13 +75,16 @@ fn get_orders(): string {
 
 fn check_available(tel: string): string {
     let day = time.now().format("%Y-%m-%d");
-    let data = send_request("/fanMuUser/getBingdPhone", json.parse(`{
-        "optype": 2,
-        "openid": "${OPENID}",
-        "tel": "${tel}",
-        "day": "${day}",
-        "comId": 21
-    }`));
+    let data = send_request(
+        "/fanMuUser/getBingdPhone",
+        json.parse(`{
+            "optype": 2,
+            "openid": "${OPENID}",
+            "tel": "${tel}",
+            "day": "${day}",
+            "comId": 21
+        }`)
+    );
 
     if (data == nil) {
         return "";
@@ -91,14 +97,17 @@ fn check_available(tel: string): string {
 fn submit_book(day: string, card_code: string, tel: string): string {
     io.println(`Submiting book for car: ${card_code} day: ${day}`);
 
-    let data = send_request("/fanMuUser/getBingdPhone", json.parse(`{
-        "optype": 3,
-        "day": "${day}",
-        "openid": "${OPENID}",
-        "tel": "${tel}",
-        "comId": 21,
-        "carCodeAll": "${card_code}"
-    }`));
+    let data = send_request(
+        "/fanMuUser/getBingdPhone",
+        json.parse(`{
+            "optype": 3,
+            "day": "${day}",
+            "openid": "${OPENID}",
+            "tel": "${tel}",
+            "comId": 21,
+            "carCodeAll": "${card_code}"
+        }`)
+    );
 
     let msg = "";
 
@@ -131,7 +140,7 @@ fn notify_feishu(msg: string) {
             "text": "${msg}"
         }
     }`);
-    
+
     let res = http.post(
         url: env.get("FEISHU_WEBHOOK_URL")!,
         headers: headers,
