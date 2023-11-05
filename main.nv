@@ -40,6 +40,7 @@ fn send_request(path: string, payload: value.Value): value.Value? {
         io.println(`请求失败，状态码：${res.status()}, text: ${res.text()}`);
         return nil;
     } else {
+        io.println(`send_request res: ${res.text()}`);
         return res.json();
     }
 }
@@ -58,7 +59,10 @@ fn get_orders(): string {
     let msg = check_available(tel);
     msgs.push(msg);
 
-    // TODO: Flatten optional
+    if (data?.get("carLogs")?.is_array() == false) {
+        io.println(`carLogs is not array, data: ${data}`);
+    }
+
     let logs = data?.get("carLogs")?.array()!;
     for (let log in logs) {
         let car_code = log.get("car")?.string();
@@ -129,6 +133,11 @@ fn submit_book(day: string, card_code: string, tel: string): string {
 }
 
 fn notify_feishu(msg: string) {
+    if (env.get("CI") == nil) {
+        io.println(`notify_feishu: ${msg}`);
+        return;
+    }
+
     let headers = http.new_headers();
     headers.set("Content-Type", "application/json");
 
