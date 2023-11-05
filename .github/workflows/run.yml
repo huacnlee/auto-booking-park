@@ -2,7 +2,6 @@ on:
   schedule:
     # every day at 10:00 am (Beijing time)
     - cron: '0 2 * * *'
-  push:
 
 jobs:
   run:
