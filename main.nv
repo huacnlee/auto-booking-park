@@ -98,7 +98,7 @@ fn check_available(tel: string): string {
     return `Today available: ${can_count}`;
 }
 
-fn submit_book(day: string, card_code: string, tel: string): string {
+fn submit_book(day: string, card_code: string, tel: string, retry: bool): string {
     io.println(`Submiting book for car: ${card_code} day: ${day}`);
 
     let data = send_request(
@@ -126,6 +126,11 @@ fn submit_book(day: string, card_code: string, tel: string): string {
             msg = `车牌已经有预约了: ${card_code}, 日期: ${day}\n\n${data}`;
         } else {
             msg = `预约失败, ${card_code}, 日期: ${day}\n\n${data}`;
+            // retry again  
+            if (retry) {
+                io.println(`${msg}, retry again.`);
+                return submit_book(day, card_code, tel, retry: false);
+            }
         }
     }
 
@@ -184,7 +189,7 @@ fn main() {
     if (date.weekday() == 3) {
         car_code = env.get("BOOK_CARCODE1")!;
     }
-    let msg = submit_book(day, car_code, tel);
+    let msg = submit_book(day, car_code, tel, true);
     io.println(msg);
     notify_feishu(msg);
 
@@ -192,7 +197,7 @@ fn main() {
     if (date.weekday() == 4) {
         car_code_b = env.get("BOOK_CARCODE_B1")!;
     }
-    let msg = submit_book(day, car_code_b, tel_b);
+    let msg = submit_book(day, car_code_b, tel_b, true);
     io.println(msg);
     notify_feishu(msg);
 

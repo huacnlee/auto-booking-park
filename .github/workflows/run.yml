@@ -14,7 +14,7 @@ jobs:
           navi-version: 0.9.0-nightly
       - name: Perform
         env:
-          CI: 1
+          CI: 2
           BOOK_OPENID: ${{ secrets.BOOK_OPENID }}
           BOOK_ENDPOINT: ${{ secrets.BOOK_ENDPOINT }}
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
