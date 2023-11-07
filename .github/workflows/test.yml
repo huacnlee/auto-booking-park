@@ -8,7 +8,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: navi-language/setup-navi@v1
         with:
-          navi-version: 0.9.0-nightly
+          navi-version: nightly
       - name: Run Tests
         env:
           CI: 1

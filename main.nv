@@ -36,8 +36,8 @@ fn send_request(path: string, payload: value.Value): value.Value? {
 
     let res = req.send();
 
-    if (res.status() != 200) {
-        io.println(`请求失败，状态码：${res.status()}, text: ${res.text()}`);
+    if (res.status != 200) {
+        io.println(`请求失败，状态码：${res.status}, text: ${res.text()}`);
         return nil;
     } else {
         io.println(`send_request res: ${res.text()}`);
@@ -98,7 +98,9 @@ fn check_available(tel: string): string {
     return `Today available: ${can_count}`;
 }
 
-fn submit_book(day: string, card_code: string, tel: string, retry: bool): string {
+fn submit_book(day: string, card_code: string, tel: string, retry: bool):
+    string
+{
     io.println(`Submiting book for car: ${card_code} day: ${day}`);
 
     let data = send_request(
@@ -126,7 +128,14 @@ fn submit_book(day: string, card_code: string, tel: string, retry: bool): string
             msg = `[车牌已约] 车牌: ${card_code} 已经有预约了, 日期: ${day}\n\n${data}`;
         } else {
             msg = `[预约失败] 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
-            // retry again  
+            // ;
+            //
+            //
+
+            //
+
+            //
+
             if (retry) {
                 io.println(`RETRY AGAIN\n---------------------\n${msg}`);
                 return submit_book(day, card_code, tel, retry: false);
@@ -161,7 +170,7 @@ fn notify_feishu(msg: string) {
         body: payload.to_json().bytes()
     );
 
-    if (res.status() != 200) {
+    if (res.status != 200) {
         let data = res.json();
         io.println(`\nFeishu Notify failed, body:\n${data}`);
     }
