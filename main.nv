@@ -5,33 +5,28 @@ use std.json;
 use std.env;
 use std.time;
 use std.process;
+use std.querystring;
 
 /// optype: [2- check status, 3 - submit booking, 4 - list, 5 - delete]
 
 let OPENID = env.get("BOOK_OPENID");
 let ENDPOINT = env.get("BOOK_ENDPOINT");
 
-fn querystring(obj: value.Value): string {
-    let queries = [string] {};
-    let items = obj.object()!;
-    for (let k, v in items) {
-        queries.push(`${k}=${v}`);
-    }
-    return queries.join("&");
+struct BookResult {
+    msg: string,
+    /// 1 - success, 0 - failed, 2 - already booked
+    status: int,
 }
 
 fn send_request(path: string, payload: value.Value): value.Value? {
     let headers = http.new_headers();
-    headers.set(
-        "Content-Type",
-        "application/x-www-form-urlencoded;charset=UTF-8"
-              );
+    headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
 
     let req = http.new_request(
         method: "POST",
         url: `${ENDPOINT}${path}`,
         headers: headers,
-        body: querystring(payload).bytes()
+        body: querystring.to_string(payload).bytes()
     );
 
     let res = req.send();
@@ -39,10 +34,10 @@ fn send_request(path: string, payload: value.Value): value.Value? {
     if (res.status != 200) {
         io.println(`请求失败，状态码：${res.status}, text: ${res.text()}`);
         return nil;
-    } else {
-        io.println(`send_request res: ${res.text()}`);
-        return res.json();
     }
+
+    io.println(`send_request res: ${res.text()}`);
+    return res.json();
 }
 
 fn get_orders(): string {
@@ -98,9 +93,9 @@ fn check_available(tel: string): string {
     return `Today available: ${can_count}`;
 }
 
-fn submit_book(day: string, card_code: string, tel: string, retry: bool):
-    string
-{
+fn submit_book(day: string, card_code: string, tel: string, retry: bool): BookResult {
+    let result = BookResult { msg: "", status: 0 };
+
     io.println(`Submiting book for car: ${card_code} day: ${day}`);
 
     let data = send_request(
@@ -115,29 +110,30 @@ fn submit_book(day: string, card_code: string, tel: string, retry: bool):
         }`)
     );
 
-    let msg = "";
-
     io.println(`=> submit_book res:\n${data}`);
     let op_status = data?.get("opStatus")?.int();
     let is_loged = data?.get("isLoged")?.bool();
 
     if (op_status == 1) {
-        msg = `[预约成功] 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
+        result.msg = `[预约成功] 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
+        result.status = 1;
     } else {
         if (is_loged == true) {
-            msg = `[车牌已约] 车牌: ${card_code} 已经有预约了, 日期: ${day}\n\n${data}`;
+            result.msg = `[车牌已约] 车牌: ${card_code} 已经有预约了, 日期: ${day}\n\n${data}`;
+            result.status = 2;
         } else {
-            msg = `[预约失败] 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
+            result.msg = `[预约失败] 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
+            result.status = 0;
             // retry again
 
             if (retry) {
-                io.println(`RETRY AGAIN\n---------------------\n${msg}`);
+                io.println(`RETRY AGAIN\n---------------------\n${result.msg}`);
                 return submit_book(day, card_code, tel, retry: false);
             }
         }
     }
 
-    return msg;
+    return result;
 }
 
 fn notify_feishu(msg: string) {
@@ -192,21 +188,27 @@ fn main() {
     if (date.weekday() == 3) {
         car_code = env.get("BOOK_CARCODE1")!;
     }
-    let msg = submit_book(day, car_code, tel, true);
-    io.println(msg);
-    notify_feishu(msg);
+    let result = submit_book(day, car_code, tel, true);
+    io.println(result.msg);
+    if (result.status != 2) {
+        notify_feishu(result.msg);
+    }
 
     let car_code_b = env.get("BOOK_CARCODE_B")!;
     if (date.weekday() == 4) {
         car_code_b = env.get("BOOK_CARCODE_B1")!;
     }
-    let msg = submit_book(day, car_code_b, tel_b, true);
-    io.println(msg);
-    notify_feishu(msg);
+    let result_b = submit_book(day, car_code_b, tel_b, true);
+    io.println(result_b.msg);
+    if (result_b.status != 2) {
+        notify_feishu(result_b.msg);
+    }
 
-    let msg = get_orders();
-    io.println(msg);
-    notify_feishu(msg);
+    if (result.status != 2 || result_b.status != 2) {
+        let msg = get_orders();
+        io.println(msg);
+        notify_feishu(msg);
+    }
 }
 
 test "test querystring" {
@@ -214,6 +216,6 @@ test "test querystring" {
         "optype": 0,
         "openid": "12345"
     }`);
-    let qs = querystring(obj);
+    let qs = querystring.to_string(obj);
     assert_eq qs, "openid=12345&optype=0";
 }
