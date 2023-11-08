@@ -2,6 +2,8 @@ on:
   schedule:
     # every day at 10:00 am (Beijing time)
     - cron: '0 2 * * *'
+    # every day at 14:00 pm (Beijing time)
+    - cron: '0 6 * * *'
     # every day at 5:00 pm (Beijing time)
     - cron: '0 9 * * *'
 
