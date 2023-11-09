@@ -93,7 +93,7 @@ fn check_available(tel: string): string {
     return `Today available: ${can_count}`;
 }
 
-fn submit_book(day: string, card_code: string, tel: string, retry: bool): BookResult {
+fn submit_book(day: string, card_code: string, tel: string, retry: bool = true): BookResult {
     let result = BookResult { msg: "", status: 0 };
 
     io.println(`Submiting book for car: ${card_code} day: ${day}`);
@@ -155,7 +155,7 @@ fn notify_feishu(msg: string) {
     }`);
 
     let res = http.post(
-        url: env.get("FEISHU_WEBHOOK_URL")!,
+        env.get("FEISHU_WEBHOOK_URL")!,
         headers: headers,
         body: payload.to_json().bytes()
     );
@@ -188,7 +188,7 @@ fn main() {
     if (date.weekday() == 3) {
         car_code = env.get("BOOK_CARCODE1")!;
     }
-    let result = submit_book(day, car_code, tel, true);
+    let result = submit_book(day, car_code, tel);
     io.println(result.msg);
     if (result.status != 2) {
         notify_feishu(result.msg);
@@ -198,7 +198,7 @@ fn main() {
     if (date.weekday() == 4) {
         car_code_b = env.get("BOOK_CARCODE_B1")!;
     }
-    let result_b = submit_book(day, car_code_b, tel_b, true);
+    let result_b = submit_book(day, car_code_b, tel_b);
     io.println(result_b.msg);
     if (result_b.status != 2) {
         notify_feishu(result_b.msg);
