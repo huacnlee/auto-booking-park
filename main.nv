@@ -176,6 +176,13 @@ fn main() {
         process.exit(1);
     }
 
+    // Exit if time is not at 17:00
+    let now = time.now();
+    if (now.hour() < 17) {
+        io.println(`当前时间: ${now.format("%Y-%m-%d %H:%M:%S")}，未到可预约时间，退出`);
+        process.exit(0);
+    }
+
     let tel = env.get("BOOK_TEL")!;
     let tel_b = env.get("BOOK_TEL_B")!;
 
@@ -219,3 +226,4 @@ test "test querystring" {
     let qs = querystring.to_string(obj);
     assert_eq qs, "openid=12345&optype=0";
 }
+
