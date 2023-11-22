@@ -195,8 +195,11 @@ fn main() {
     }
     let result = submit_book(day, car_code, tel);
     io.println(result.msg);
-    if (result.status != 2 && is_right_time) {
-        notify_feishu(result.msg);
+
+    if (is_right_time) {
+        if (result.status != 2) {
+            notify_feishu(result.msg);
+        }
     }
 
     let car_code_b = env.get("BOOK_CARCODE_B")!;
@@ -205,14 +208,17 @@ fn main() {
     }
     let result_b = submit_book(day, car_code_b, tel_b);
     io.println(result_b.msg);
-    if (result_b.status != 2 && is_right_time) {
-        notify_feishu(result_b.msg);
-    }
 
-    if (result.status != 2 || result_b.status != 2 && is_right_time) {
-        let msg = get_orders();
-        io.println(msg);
-        notify_feishu(msg);
+    if (is_right_time) {
+        if (result_b.status != 2) {
+            notify_feishu(result_b.msg);
+        }
+
+        if (result.status != 2 || result_b.status != 2) {
+            let msg = get_orders();
+            io.println(msg);
+            notify_feishu(msg);
+        }
     }
 }
 
@@ -224,4 +230,3 @@ test "test querystring" {
     let qs = querystring.to_string(obj);
     assert_eq qs, "openid=12345&optype=0";
 }
-
