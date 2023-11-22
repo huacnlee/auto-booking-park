@@ -178,10 +178,8 @@ fn main() {
 
     // Exit if time is not at 17:00
     let now = time.now();
-    if (now.hour() < 17) {
-        io.println(`当前时间: ${now.format("%Y-%m-%d %H:%M:%S")}，未到可预约时间，退出`);
-        process.exit(0);
-    }
+    // In UTC is 17 - 8 = 09:00
+    let is_right_time = now.hour() == 9;
 
     let tel = env.get("BOOK_TEL")!;
     let tel_b = env.get("BOOK_TEL_B")!;
@@ -197,7 +195,7 @@ fn main() {
     }
     let result = submit_book(day, car_code, tel);
     io.println(result.msg);
-    if (result.status != 2) {
+    if (result.status != 2 && is_right_time) {
         notify_feishu(result.msg);
     }
 
@@ -207,11 +205,11 @@ fn main() {
     }
     let result_b = submit_book(day, car_code_b, tel_b);
     io.println(result_b.msg);
-    if (result_b.status != 2) {
+    if (result_b.status != 2 && is_right_time) {
         notify_feishu(result_b.msg);
     }
 
-    if (result.status != 2 || result_b.status != 2) {
+    if (result.status != 2 || result_b.status != 2 && is_right_time) {
         let msg = get_orders();
         io.println(msg);
         notify_feishu(msg);
