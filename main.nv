@@ -6,15 +6,23 @@ use std.env;
 use std.time;
 use std.process;
 use std.querystring;
+
 /// optype: [2- check status, 3 - submit booking, 4 - list, 5 - delete]
 
 let OPENID = env.get("BOOK_OPENID");
 let ENDPOINT = env.get("BOOK_ENDPOINT");
 
 struct BookResult {
-    msg: string,
-    /// 1 - success, 0 - failed, 2 - already booked
-    status: int,
+    /// message, default: ""
+    msg: string = "",
+    /// 1 - success, 0 - failed, 2 - already booked, default: 0
+    status: int = 0,
+}
+
+impl BookResult {
+    fn new(): BookResult {
+        return BookResult {};
+    }
 }
 
 fn send_request(path: string, payload: value.Value): value.Value? throws {
@@ -48,7 +56,7 @@ fn get_orders(): string throws {
     }`);
     let data = try send_request("/fanMuUser/getBingdPhone", payload);
 
-    let msgs = [string] {};
+    let msgs: [string] = {};
 
     let msg = try check_available(tel);
     msgs.push(msg);
@@ -62,7 +70,9 @@ fn get_orders(): string throws {
         let car_code = log.get("car")?.string();
         let day = log.get("day")?.string();
         let status = log.get("status")?.string();
+
         msgs.push(`车牌: ${car_code}, 日期: ${day}`);
+
         if (msgs.len() > 5) {
             break;
         }
@@ -93,7 +103,7 @@ fn check_available(tel: string): string throws {
 }
 
 fn submit_book(day: string, card_code: string, tel: string, retry: bool = true): BookResult throws {
-    let result = BookResult { msg: "", status: 0 };
+    let result = BookResult.new();
 
     io.println(`Submiting book for car: ${card_code} day: ${day}`);
 
@@ -228,4 +238,10 @@ test "test querystring" {
     }`);
     let qs = try! querystring.to_string(obj);
     assert_eq qs, "openid=12345&optype=0";
+}
+
+test "book_result" {
+    let result = BookResult.new();
+    assert_eq result.status, 0;
+    assert_eq result.msg, "";
 }

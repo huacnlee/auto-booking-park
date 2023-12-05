@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: navi-language/setup-navi@v1
         with:
-          navi-version: v0.9.1-nightly-20231202
+          navi-version: v0.9.1-nightly-20231205
       - name: Perform
         env:
           CI: 1
