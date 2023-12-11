@@ -1,6 +1,5 @@
-use std.net.http;
+use std.net.http.{self, Headers, Request, Response};
 use std.io;
-use std.value;
 use std.json;
 use std.env;
 use std.time;
@@ -25,11 +24,13 @@ impl BookResult {
     }
 }
 
-fn send_request(path: string, payload: value.Value): value.Value? throws {
-    let headers = http.new_headers();
+type Query = <string, string>;
+
+fn send_request(path: string, payload: Query): Response throws {
+    let headers = Headers.new();
     headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
 
-    let req = try http.new_request(
+    let req = try Request.new(
         method: "POST",
         url: `${ENDPOINT}${path}`,
         headers: headers,
@@ -39,39 +40,48 @@ fn send_request(path: string, payload: value.Value): value.Value? throws {
     let res = try req.send();
 
     if (res.status != 200) {
-        io.println(`请求失败，状态码：${res.status}, text: ${try! res.text()}`);
-        return nil;
+        throw `请求失败，状态码：${res.status}, text: ${try! res.text()}`;
     }
 
     io.println(`send_request res: ${try! res.text()}`);
-    return try res.json();
+    return res;
+}
+
+struct OrderResult {
+    #[serde(rename = "carLogs")]
+    car_logs: [CarLog]?,
+}
+
+struct CarLog {
+    car: string?,
+    day: string?,
+    status: string?,
 }
 
 fn get_orders(): string throws {
-    let tel = env.get("BOOK_TEL")!;
-    let payload = try! json.parse(`{
-        "optype": 4,
-        "openid": "${OPENID}",
-        "tel": "${tel}"
-    }`);
-    let data = try send_request("/fanMuUser/getBingdPhone", payload);
+    let tel: string = env.get("BOOK_TEL")!;
+
+    let res = try send_request(
+        "/fanMuUser/getBingdPhone",
+        {
+            "optype": "4",
+            "openid": OPENID!,
+            "tel": tel
+        }
+    );
+    let data = try res.json::<OrderResult>();
 
     let msgs: [string] = {};
 
     let msg = try check_available(tel);
     msgs.push(msg);
 
-    if (data?.get("carLogs")?.is_array() == false) {
+    if (data.car_logs == nil) {
         io.println(`carLogs is not array, data: ${data}`);
     }
 
-    let logs = data?.get("carLogs")?.array()!;
-    for (let log in logs) {
-        let car_code = log.get("car")?.string();
-        let day = log.get("day")?.string();
-        let status = log.get("status")?.string();
-
-        msgs.push(`车牌: ${car_code}, 日期: ${day}`);
+    for (let log in data.car_logs!) {
+        msgs.push(`车牌: ${log.car}, 日期: ${log.day}`);
 
         if (msgs.len() > 5) {
             break;
@@ -82,24 +92,39 @@ fn get_orders(): string throws {
 }
 
 fn check_available(tel: string): string throws {
-    let day = time.now().format("%Y-%m-%d");
-    let data = try send_request(
+    let day = time.now().format("%Y-%m-%d")!;
+    let res = try send_request(
         "/fanMuUser/getBingdPhone",
-        try json.parse(`{
-            "optype": 2,
-            "openid": "${OPENID}",
-            "tel": "${tel}",
-            "day": "${day}",
-            "comId": 21
-        }`)
+        {
+            "optype": "2",
+            "openid": OPENID!,
+            "tel": tel,
+            "day": day,
+            "comId": "21"
+        }
     );
+
+    let data = try res.json::<<string, int?>?>();
 
     if (data == nil) {
         return "";
     }
 
-    let can_count = data?.get("canCarNum")?.int()!;
+    let can_count = data?.get("canCarNum");
     return `Today available: ${can_count}`;
+}
+
+struct SubmitResult {
+    #[serde(rename = "opStatus")]
+    op_status: int,
+    #[serde(rename = "isLoged")]
+    is_loged: bool,
+}
+
+impl SubmitResult {
+    fn to_string(self): string {
+        return try! json.to_string(self);
+    }
 }
 
 fn submit_book(day: string, card_code: string, tel: string, retry: bool = true): BookResult throws {
@@ -107,21 +132,23 @@ fn submit_book(day: string, card_code: string, tel: string, retry: bool = true):
 
     io.println(`Submiting book for car: ${card_code} day: ${day}`);
 
-    let data = try send_request(
+    let res = try send_request(
         "/fanMuUser/getBingdPhone",
-        json.parse(`{
-            "optype": 3,
-            "day": "${day}",
-            "openid": "${OPENID}",
-            "tel": "${tel}",
-            "comId": 21,
-            "carCodeAll": "${card_code}"
-        }`)
+        {
+            "optype": "3",
+            "day": day,
+            "openid": OPENID!,
+            "tel": tel,
+            "comId": "21",
+            "carCodeAll": card_code
+        }
     );
 
+    let data = try res.json::<SubmitResult>();
+
     io.println(`=> submit_book res:\n${data}`);
-    let op_status = data?.get("opStatus")?.int();
-    let is_loged = data?.get("isLoged")?.bool();
+    let op_status = data.op_status;
+    let is_loged = data.is_loged;
 
     if (op_status == 1) {
         result.msg = `[预约成功] 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
@@ -151,27 +178,27 @@ fn notify_feishu(msg: string) {
         return;
     }
 
-    let headers = http.new_headers();
+    let headers = Headers.new();
     headers.set("Content-Type", "application/json");
 
     let msg = msg.replace("\n", "\\n");
 
-    let payload = try! json.parse(`{
+    let payload = `{
         "msg_type": "text",
         "content": {
             "text": "${msg}"
         }
-    }`);
+    }`;
 
     let res = try! http.post(
         env.get("FEISHU_WEBHOOK_URL")!,
         headers: headers,
-        body: payload.to_json().bytes()
+        body: payload.bytes()
     );
 
     if (res.status != 200) {
-        let data = try! res.json();
-        io.println(`\nFeishu Notify failed, body:\n${data}`);
+        let text = try! res.text();
+        io.println(`\nFeishu Notify failed, body:\n${text}`);
     }
 }
 
@@ -232,11 +259,7 @@ fn main() throws {
 }
 
 test "test querystring" {
-    let obj = try! json.parse(`{
-        "optype": 0,
-        "openid": "12345"
-    }`);
-    let qs = try! querystring.to_string(obj);
+    let qs = try! querystring.to_string(<string, string> { "optype": "0", "openid": "12345" });
     assert_eq qs, "openid=12345&optype=0";
 }
 
