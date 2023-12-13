@@ -127,10 +127,10 @@ impl SubmitResult {
     }
 }
 
-fn submit_book(day: string, card_code: string, tel: string, retry: bool = true): BookResult throws {
+fn submit_book(day: string, car_code: string, tel: string, retry: bool = true): BookResult throws {
     let result = BookResult.new();
 
-    io.println(`Submiting book for car: ${card_code} day: ${day}`);
+    io.println(`Submiting book for car: ${car_code} day: ${day}`);
 
     let res = try send_request(
         "/fanMuUser/getBingdPhone",
@@ -140,7 +140,7 @@ fn submit_book(day: string, card_code: string, tel: string, retry: bool = true):
             "openid": OPENID!,
             "tel": tel,
             "comId": "21",
-            "carCodeAll": card_code
+            "carCodeAll": car_code
         }
     );
 
@@ -151,20 +151,20 @@ fn submit_book(day: string, card_code: string, tel: string, retry: bool = true):
     let is_loged = data.is_loged;
 
     if (op_status == 1) {
-        result.msg = `[预约成功] 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
+        result.msg = `[预约成功] 车牌: ${car_code}, 日期: ${day}\n\n${data}`;
         result.status = 1;
     } else {
         if (is_loged == true) {
-            result.msg = `[车牌已约] 车牌: ${card_code} 已经有预约了, 日期: ${day}\n\n${data}`;
+            result.msg = `[车牌已约] 车牌: ${car_code} 已经有预约了, 日期: ${day}\n\n${data}`;
             result.status = 2;
         } else {
-            result.msg = `[预约失败] 车牌: ${card_code}, 日期: ${day}\n\n${data}`;
+            result.msg = `[预约失败] 车牌: ${car_code}, 日期: ${day}\n\n${data}`;
             result.status = 0;
             // retry again
 
             if (retry) {
                 io.println(`RETRY AGAIN\n---------------------\n${result.msg}`);
-                return try submit_book(day, card_code, tel, retry: false);
+                return try submit_book(day, car_code, tel, retry: false);
             }
         }
     }
