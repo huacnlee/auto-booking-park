@@ -11,4 +11,4 @@ echo '---------------------------------------------'
 
 
 echo $(pwd)
-CI=1 $HOME/.navi/navi run main.nv
+CI=1 $HOME/.navi/navi-stable run main.nv

@@ -29,6 +29,10 @@ type Query = <string, string>;
 fn send_request(path: string, payload: Query): Response throws {
     let headers = Headers.new();
     headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+    headers.set(
+        "User-Agent",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36"
+    );
 
     let req = try Request.new(
         method: "POST",
