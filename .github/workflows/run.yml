@@ -1,19 +1,7 @@
 on:
-  schedule:
-    # every day at 10:00 (Beijing time)
-    # - cron: '0 2 * * *'
-    # every day at 14:00 (Beijing time)
-    # - cron: '0 6 * * *'
-    # every day at 16:56 (Beijing time)
-    - cron: '56 8 * * *'
-    # every day at 16:57 (Beijing time)
-    - cron: '57 8 * * *'
-    # every day at 16:58 (Beijing time)
-    - cron: '58 8 * * *'
-    # every day at 16:59 (Beijing time)
-    - cron: '59 8 * * *'
-    # every day at 17:00 (Beijing time)
-    - cron: '0 9 * * *'
+  push:
+    branches:
+      - schedule
 
 jobs:
   run:
